@@ -29,7 +29,6 @@ import { fCurrency } from 'src/utils/format-number';
 import { Label } from 'src/components/label';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-import { Scrollbar } from 'src/components/scrollbar';
 
 import CameraViewfinder from './camera-viewfinder';
 
@@ -287,7 +286,8 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
       fullWidth
       PaperProps={{
         sx: {
-          height: '92vh',
+          height: { xs: '96vh', md: '92vh' },
+          maxHeight: '96vh',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: 2,
@@ -341,18 +341,35 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
       </DialogTitle>
 
       {/* Main Content Area */}
-      <DialogContent sx={{ p: 0, flex: 1, overflow: 'hidden' }}>
-        <Grid container sx={{ height: '100%' }}>
+      <DialogContent
+        sx={{
+          p: 0,
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: { xs: 'auto', md: 'hidden' },
+        }}
+      >
+        <Grid container sx={{ flex: 1, minHeight: { xs: 'auto', md: 0 }, height: { md: '100%' } }}>
           {/* LEFT PANE: Camera Capture / Upload & Image Preview */}
           <Grid
             xs={12}
             md={5}
             sx={{
-              height: '100%',
-              borderRight: (t) => `1px solid ${t.palette.divider}`,
+              height: { xs: 'auto', md: '100%' },
+              minHeight: 0,
+              borderRight: (t) => ({ md: `1px solid ${t.palette.divider}` }),
+              borderBottom: (t) => ({ xs: `1px solid ${t.palette.divider}`, md: 'none' }),
               display: 'flex',
               flexDirection: 'column',
               bgcolor: 'background.neutral',
+              overflowY: 'auto',
+              '&::-webkit-scrollbar': { width: 6 },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: 'rgba(145, 158, 171, 0.35)',
+                borderRadius: 3,
+              },
             }}
           >
             {/* Top Mode Selector when no image selected */}
@@ -510,10 +527,13 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
             xs={12}
             md={7}
             sx={{
-              height: '100%',
+              height: { xs: 'auto', md: '100%' },
+              minHeight: 0,
               display: 'flex',
               flexDirection: 'column',
               bgcolor: 'background.paper',
+              overflow: 'hidden',
+              flex: 1,
             }}
           >
             {/* Loading / Scanning Progress */}
@@ -575,8 +595,29 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                 </Typography>
               </Box>
             ) : (
-              /* Scanning Results Display */
-              <Scrollbar sx={{ flex: 1, p: 3 }}>
+              /* Scanning Results Display with visible custom scrollbar */
+              <Box
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  p: { xs: 2, md: 3 },
+                  overflowY: 'auto',
+                  '&::-webkit-scrollbar': {
+                    width: 8,
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: 'rgba(145, 158, 171, 0.08)',
+                    borderRadius: 4,
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: 'rgba(145, 158, 171, 0.45)',
+                    borderRadius: 4,
+                  },
+                  '&::-webkit-scrollbar-thumb:hover': {
+                    backgroundColor: 'rgba(145, 158, 171, 0.75)',
+                  },
+                }}
+              >
                 {/* Doctor & Patient Overview Header */}
                 <Card sx={{ p: 2.5, mb: 3, bgcolor: 'background.neutral' }}>
                   <Grid container spacing={2}>
@@ -865,7 +906,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                     );
                   })}
                 </Stack>
-              </Scrollbar>
+              </Box>
             )}
 
             {/* Bottom Actions Bar */}

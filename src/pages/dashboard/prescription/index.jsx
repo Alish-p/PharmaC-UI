@@ -6,7 +6,6 @@ import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
-import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
 
@@ -65,87 +64,6 @@ export default function PrescriptionWorkbenchPage() {
           Scan / Upload Prescription
         </Button>
       </Stack>
-
-      {/* Main Workflow Guide Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid xs={12} md={4}>
-          <Card sx={{ p: 3, height: '100%', border: (t) => `1px solid ${t.palette.divider}` }}>
-            <Box
-              sx={{
-                width: 52,
-                height: 52,
-                borderRadius: 2,
-                bgcolor: 'primary.lighter',
-                color: 'primary.main',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Iconify icon="solar:camera-bold-duotone" width={30} />
-            </Box>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              1. Capture or Upload
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Use your device webcam or mobile camera to snap a live photo of the prescription, or drag & drop high-res image files (JPG, PNG, WEBP).
-            </Typography>
-          </Card>
-        </Grid>
-
-        <Grid xs={12} md={4}>
-          <Card sx={{ p: 3, height: '100%', border: (t) => `1px solid ${t.palette.divider}` }}>
-            <Box
-              sx={{
-                width: 52,
-                height: 52,
-                borderRadius: 2,
-                bgcolor: 'info.lighter',
-                color: 'info.main',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Iconify icon="solar:magic-stick-3-bold-duotone" width={30} />
-            </Box>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              2. Gemini Vision AI OCR
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Google Gemini Vision deciphers messy doctor handwriting, identifies brand names, dosage strengths, timings, frequencies, and generic chemical salts.
-            </Typography>
-          </Card>
-        </Grid>
-
-        <Grid xs={12} md={4}>
-          <Card sx={{ p: 3, height: '100%', border: (t) => `1px solid ${t.palette.divider}` }}>
-            <Box
-              sx={{
-                width: 52,
-                height: 52,
-                borderRadius: 2,
-                bgcolor: 'success.lighter',
-                color: 'success.main',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Iconify icon="solar:cart-large-4-bold-duotone" width={30} />
-            </Box>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              3. Smart Inventory Match & POS
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Automatically checks live pharmacy stock, suggests generic salt alternatives for out-of-stock brands, and adds selected items to POS billing in 1 click.
-            </Typography>
-          </Card>
-        </Grid>
-      </Grid>
 
       {/* Interactive Launch Card */}
       <Card
