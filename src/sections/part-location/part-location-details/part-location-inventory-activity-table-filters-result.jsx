@@ -1,0 +1,134 @@
+/* eslint-disable react/prop-types */
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+
+import { fDateRangeShortLabel } from 'src/utils/format-time';
+
+import { Iconify } from 'src/components/iconify';
+
+import { ACTIVITY_TYPES } from '../../part/part-constant';
+
+export default function PartLocationInventoryActivityTableFiltersResult({
+  filters,
+  onFilters,
+  onResetFilters,
+  results,
+  selectedPerformedByLabel,
+  onClearPerformedBy,
+  selectedPart,
+  onClearPart,
+  ...other
+}) {
+  const handleRemoveType = () => {
+    onFilters('type', '');
+  };
+
+  const handleRemovePerformedBy = () => {
+    if (onClearPerformedBy) {
+      onClearPerformedBy();
+    }
+    onFilters('performedBy', '');
+  };
+
+  const handleRemovePart = () => {
+    if (onClearPart) {
+      onClearPart();
+    }
+    onFilters('part', '');
+  };
+
+  const handleRemoveDateRange = () => {
+    onFilters({ fromDate: null, toDate: null });
+  };
+
+  const hasDateRange = filters.fromDate && filters.toDate;
+
+  const dateRangeLabel = hasDateRange ? fDateRangeShortLabel(filters.fromDate, filters.toDate) : '';
+
+  const selectedTypeLabel = filters.type
+    ? ACTIVITY_TYPES.find((opt) => opt.value === filters.type)?.label || filters.type
+    : '';
+
+  return (
+    <Stack spacing={1.5} {...other}>
+      <Box sx={{ typography: 'body2' }}>
+        <strong>{results}</strong>
+        <Box component="span" sx={{ color: 'text.secondary', ml: 0.25 }}>
+          results found
+        </Box>
+      </Box>
+
+      <Stack flexGrow={1} spacing={1} direction="row" flexWrap="wrap" alignItems="center">
+        {filters.type && (
+          <Block label="Type:">
+            <Chip size="small" label={selectedTypeLabel} onDelete={handleRemoveType} />
+          </Block>
+        )}
+
+        {filters.performedBy && (
+          <Block label="Performed By:">
+            <Chip
+              size="small"
+              label={selectedPerformedByLabel || filters.performedBy}
+              onDelete={handleRemovePerformedBy}
+            />
+          </Block>
+        )}
+
+        {filters.part && (
+          <Block label="Part:">
+            <Chip
+              size="small"
+              label={selectedPart?.name || selectedPart?.partNumber || filters.part}
+              onDelete={handleRemovePart}
+            />
+          </Block>
+        )}
+
+        {hasDateRange && (
+          <Block label="Date Range:">
+            <Chip size="small" label={dateRangeLabel} onDelete={handleRemoveDateRange} />
+          </Block>
+        )}
+
+        <Button
+          color="error"
+          onClick={onResetFilters}
+          startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+        >
+          Clear
+        </Button>
+      </Stack>
+    </Stack>
+  );
+}
+
+function Block({ label, children, sx, ...other }) {
+  return (
+    <Stack
+      component={Paper}
+      variant="outlined"
+      spacing={1}
+      direction="row"
+      sx={{
+        p: 1,
+        borderRadius: 1,
+        overflow: 'hidden',
+        borderStyle: 'dashed',
+        ...sx,
+      }}
+      {...other}
+    >
+      <Box component="span" sx={{ typography: 'subtitle2' }}>
+        {label}
+      </Box>
+
+      <Stack spacing={1} direction="row" flexWrap="wrap">
+        {children}
+      </Stack>
+    </Stack>
+  );
+}

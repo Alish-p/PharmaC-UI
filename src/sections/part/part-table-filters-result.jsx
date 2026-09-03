@@ -1,0 +1,114 @@
+/* eslint-disable react/prop-types */
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+
+import { Iconify } from 'src/components/iconify';
+
+export default function PartTableFiltersResult({
+  filters,
+  onFilters,
+  onResetFilters,
+  results,
+  ...other
+}) {
+  const handleRemoveSearch = () => {
+    onFilters('search', '');
+  };
+
+  const handleRemoveCategory = () => {
+    onFilters('category', 'all');
+  };
+
+  const handleRemoveManufacturer = () => {
+    onFilters('manufacturer', 'all');
+  };
+
+  const handleRemoveStatus = () => {
+    onFilters('status', '');
+  };
+
+  return (
+    <Stack spacing={1.5} {...other}>
+      <Box sx={{ typography: 'body2' }}>
+        <strong>{results}</strong>
+        <Box component="span" sx={{ color: 'text.secondary', ml: 0.25 }}>
+          results found
+        </Box>
+      </Box>
+
+      <Stack flexGrow={1} spacing={1} direction="row" flexWrap="wrap" alignItems="center">
+        {filters.search && (
+          <Block label="Search :">
+            <Chip size="small" label={filters.search} onDelete={handleRemoveSearch} />
+          </Block>
+        )}
+
+        {filters.category && filters.category !== 'all' && (
+          <Block label="Category:">
+            <Chip size="small" label={filters.category} onDelete={handleRemoveCategory} />
+          </Block>
+        )}
+
+        {filters.manufacturer && filters.manufacturer !== 'all' && (
+          <Block label="Manufacturer:">
+            <Chip size="small" label={filters.manufacturer} onDelete={handleRemoveManufacturer} />
+          </Block>
+        )}
+
+        {filters.status && (
+          <Block label="Stock Status:">
+            <Chip
+              size="small"
+              label={
+                filters.status === 'inStock'
+                  ? 'In stock'
+                  : filters.status === 'lowStock'
+                    ? 'Low stock'
+                    : 'Out Of Stock'
+              }
+              onDelete={handleRemoveStatus}
+            />
+          </Block>
+        )}
+
+        <Button
+          color="error"
+          onClick={onResetFilters}
+          startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+        >
+          Clear
+        </Button>
+      </Stack>
+    </Stack>
+  );
+}
+
+function Block({ label, children, sx, ...other }) {
+  return (
+    <Stack
+      component={Paper}
+      variant="outlined"
+      spacing={1}
+      direction="row"
+      sx={{
+        p: 1,
+        borderRadius: 1,
+        overflow: 'hidden',
+        borderStyle: 'dashed',
+        ...sx,
+      }}
+      {...other}
+    >
+      <Box component="span" sx={{ typography: 'subtitle2' }}>
+        {label}
+      </Box>
+
+      <Stack spacing={1} direction="row" flexWrap="wrap">
+        {children}
+      </Stack>
+    </Stack>
+  );
+}

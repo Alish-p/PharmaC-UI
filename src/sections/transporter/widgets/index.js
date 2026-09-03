@@ -1,0 +1,9 @@
+export { InfoItem } from './info-item';
+export { TransporterBasicWidget } from './transporter-basic-widget';
+export { TransporterFinanceWidget } from './transporter-finance-widget';
+export { TransporterVehiclesWidget } from './transporter-vehicles-widget';
+export { TransporterPaymentsWidget } from './transporter-payments-widget';
+export { TransporterSubtripsWidget } from './transporter-subtrips-widget';
+export { TransporterAdvancesWidget } from './transporter-advances-widget';
+export { TransporterDocumentsWidget } from './transporter-documents-widget';
+export { TransporterAdditionalWidget } from './transporter-additional-widget';

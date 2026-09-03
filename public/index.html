@@ -1,0 +1,17 @@
+<!-- Add these lines in the <head> section -->
+<link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+<!-- Add this script just before closing </body> tag -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then((registration) => {
+          console.log('ServiceWorker registration successful');
+        })
+        .catch((err) => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+    });
+  }
+</script> 

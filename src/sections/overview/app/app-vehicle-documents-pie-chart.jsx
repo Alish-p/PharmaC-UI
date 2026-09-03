@@ -1,0 +1,76 @@
+import Card from '@mui/material/Card';
+import Divider from '@mui/material/Divider';
+import { useTheme } from '@mui/material/styles';
+import CardHeader from '@mui/material/CardHeader';
+
+import { fShortenNumber } from 'src/utils/format-number';
+
+import { Chart, useChart, ChartLegends } from 'src/components/chart';
+
+// ----------------------------------------------------------------------
+
+export function VehicleDocumentsPieChart({ title, subheader, chart, ...other }) {
+  const theme = useTheme();
+
+  const chartColors = chart.colors ?? [
+    theme.palette.grey[200],
+    theme.palette.error.main,
+    theme.palette.warning.main,
+    theme.palette.success.main,
+  ];
+
+  const chartSeries = chart.series.map((item) => item.value);
+
+  const chartOptions = useChart({
+    chart: { sparkline: { enabled: true } },
+    colors: chartColors,
+    labels: chart.series.map((item) => item.label),
+    stroke: { width: 0 },
+    tooltip: {
+      y: {
+        formatter: (value) => fShortenNumber(value),
+        title: { formatter: (seriesName) => `${seriesName}` },
+      },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '72%',
+          labels: {
+            value: { formatter: (value) => fShortenNumber(value) },
+            total: {
+              formatter: (w) => {
+                const sum = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                return fShortenNumber(sum);
+              },
+            },
+          },
+        },
+      },
+    },
+    ...chart.options,
+  });
+
+  return (
+    <Card {...other}>
+      <CardHeader title={title} subheader={subheader} />
+
+      <Chart
+        type="donut"
+        series={chartSeries}
+        options={chartOptions}
+        width={{ xs: 240, xl: 260 }}
+        height={{ xs: 240, xl: 260 }}
+        sx={{ my: 6, mx: 'auto' }}
+      />
+
+      <Divider sx={{ borderStyle: 'dashed' }} />
+
+      <ChartLegends
+        labels={chartOptions?.labels}
+        colors={chartOptions?.colors}
+        sx={{ p: 3, justifyContent: 'center' }}
+      />
+    </Card>
+  );
+}

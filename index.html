@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preload" href="/assets/illustrations/characters/character-3.webp" as="image" fetchpriority="high" />
+    <title>PharmaC - Pharmacy Management System</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      window.addEventListener('load', () => {
+        // Ensure old service workers don't cache-bust our app.
+        if ('serviceWorker' in navigator) {
+          // Unregister any existing service workers from previous deployments
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+
+        // Clear any caches that might hold outdated assets
+        if (typeof caches !== 'undefined' && caches.keys) {
+          caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+        }
+      });
+    </script>
+  </body>
+</html>

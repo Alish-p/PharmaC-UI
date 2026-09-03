@@ -1,0 +1,19 @@
+import { Helmet } from 'react-helmet-async';
+
+import { CONFIG } from 'src/config-global';
+
+import { PartListView } from 'src/sections/part/views';
+
+const metadata = { title: `Parts list | Dashboard - ${CONFIG.site.name}` };
+
+export default function Page() {
+  return (
+    <>
+      <Helmet>
+        <title> {metadata.title}</title>
+      </Helmet>
+
+      <PartListView />
+    </>
+  );
+}
