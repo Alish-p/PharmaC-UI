@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -53,30 +53,18 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
   const [selectedItems, setSelectedItems] = useState({});
   const [autoApplyCustomer, setAutoApplyCustomer] = useState(true);
 
-  // Timers ref for smooth progressive status updates
-  const timersRef = useRef([]);
-
-  const clearScanTimers = useCallback(() => {
-    timersRef.current.forEach((timer) => clearTimeout(timer));
-    timersRef.current = [];
-  }, []);
-
-  useEffect(() => () => clearScanTimers(), [clearScanTimers]);
-
   // Reset state
   const handleReset = useCallback(() => {
-    clearScanTimers();
     setImageFile(null);
     setImagePreview('');
     setImageBase64('');
     setZoomLevel(1);
     setIsScanning(false);
-    setScanProgressText('');
     setScanResult(null);
     setSelectedItems({});
     setSourceMode('upload');
     setMobileTab('medicines');
-  }, [clearScanTimers]);
+  }, []);
 
   const handleClose = () => {
     handleReset();
@@ -108,7 +96,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
 
       img.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        const maxDimension = 1536;
+        const maxDimension = 2048;
         let { width, height } = img;
 
         if (width > maxDimension || height > maxDimension) {
@@ -140,11 +128,11 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
               type: 'image/jpeg',
               lastModified: Date.now(),
             });
-            const base64 = canvas.toDataURL('image/jpeg', 0.82);
+            const base64 = canvas.toDataURL('image/jpeg', 0.85);
             resolve({ file: compressedFile, base64 });
           },
           'image/jpeg',
-          0.82
+          0.85
         );
       };
 
@@ -168,32 +156,19 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
       return;
     }
 
-    // Reset input value so selecting the same image triggers onChange
-    e.target.value = '';
-
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
-    setIsScanning(true);
-    setScanProgressText('Optimizing image for AI analysis...');
 
-    try {
-      // Compress large smartphone camera photos in the background
-      const { file: processedFile, base64 } = await compressImage(file);
-      setImageFile(processedFile);
-      if (base64) setImageBase64(base64);
+    // Compress large smartphone camera photos in the background (100ms)
+    const { file: processedFile, base64 } = await compressImage(file);
+    setImageFile(processedFile);
+    if (base64) setImageBase64(base64);
 
-      triggerScan(processedFile, base64, false);
-    } catch (err) {
-      console.error('Image processing error:', err);
-      setIsScanning(false);
-      setScanProgressText('');
-      toast.error('Failed to process prescription image');
-    }
+    triggerScan(processedFile, base64, false);
   };
 
   // Trigger scanning API
   const triggerScan = async (fileObj, base64Data, simulate = false) => {
-    clearScanTimers();
     setIsScanning(true);
     setScanProgressText('Scanning prescription with Gemini Vision OCR...');
 
@@ -203,9 +178,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
 
     const stepTimer2 = setTimeout(() => {
       setScanProgressText('Matching active medicine inventory & stock batches...');
-    }, 3200);
-
-    timersRef.current = [stepTimer1, stepTimer2];
+    }, 3000);
 
     try {
       let res;
@@ -224,7 +197,8 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
         );
       }
 
-      clearScanTimers();
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
 
       const { data } = res.data;
       setScanResult(data);
@@ -265,7 +239,8 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
         `Prescription analyzed! ${data.matchedMedicines.length} medicine(s) detected.`
       );
     } catch (err) {
-      clearScanTimers();
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
       console.error('Scan error:', err);
 
       if (err.code === 'MISSING_GEMINI_API_KEY' || err.message?.includes('GEMINI_API_KEY')) {
@@ -377,15 +352,6 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
     [selectedItems]
   );
 
-  // Dynamic pane visibility for mobile responsiveness
-  const showRightPane = isMobile
-    ? Boolean((scanResult && mobileTab === 'medicines') || (isScanning && !imagePreview))
-    : true;
-
-  const showLeftPane = isMobile
-    ? Boolean((!scanResult && (imagePreview || !isScanning || !showRightPane)) || (scanResult && mobileTab === 'image'))
-    : true;
-
   return (
     <Dialog
       open={open}
@@ -455,19 +421,6 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
         </Stack>
       </DialogTitle>
 
-      {/* Global Dialog Loading Indicator */}
-      {isScanning && (
-        <LinearProgress
-          color="primary"
-          sx={{
-            height: 3,
-            width: '100%',
-            position: 'relative',
-            zIndex: 9,
-          }}
-        />
-      )}
-
       {/* Mobile Switcher Tab when prescription is scanned */}
       {isMobile && imagePreview && scanResult && (
         <Stack
@@ -523,15 +476,15 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
             xs={12}
             md={5}
             sx={{
-              display: showLeftPane ? 'flex' : 'none',
-              height: { xs: '100%', md: '100%' },
+              display: isMobile && scanResult && mobileTab !== 'image' ? 'none' : 'flex',
+              height: { xs: 'auto', md: '100%' },
               minHeight: 0,
               borderRight: (t) => ({ md: `1px solid ${t.palette.divider}` }),
               borderBottom: (t) => ({ xs: `1px solid ${t.palette.divider}`, md: 'none' }),
               flexDirection: 'column',
               bgcolor: 'background.neutral',
               overflowY: 'auto',
-              flex: isMobile && (scanResult || isScanning || imagePreview) ? 1 : undefined,
+              flex: isMobile && scanResult ? 1 : undefined,
               '&::-webkit-scrollbar': { width: 6 },
               '&::-webkit-scrollbar-thumb': {
                 backgroundColor: 'rgba(145, 158, 171, 0.35)',
@@ -658,70 +611,36 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                   justifyContent="space-between"
                   sx={{ p: 1.5, borderBottom: (t) => `1px solid ${t.palette.divider}`, bgcolor: 'background.paper' }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {isScanning ? (
-                        <CircularProgress size={16} color="primary" thickness={5} />
-                      ) : (
-                        <Iconify icon="solar:file-check-bold" color="success.main" />
-                      )}
-                      Prescription Image
-                    </Typography>
+                  <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Iconify icon="solar:file-check-bold" color="success.main" />
+                    Prescription Image
+                  </Typography>
 
-                    {isScanning && (
-                      <Chip
-                        size="small"
-                        color="primary"
-                        variant="soft"
-                        icon={<CircularProgress size={12} color="inherit" thickness={5} />}
-                        label={isSmMobile ? 'Analyzing...' : 'AI Analyzing...'}
-                        sx={{ fontWeight: 600, height: 22, fontSize: '0.72rem' }}
-                      />
-                    )}
-                  </Stack>
-
-                  <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Stack direction="row" spacing={1} alignItems="center">
                     <Tooltip title="Zoom Out">
-                      <span>
-                        <IconButton
-                          size="small"
-                          disabled={isScanning}
-                          onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.2))}
-                        >
-                          <Iconify icon="solar:magnifer-zoom-out-bold" />
-                        </IconButton>
-                      </span>
+                      <IconButton size="small" onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.2))}>
+                        <Iconify icon="solar:magnifer-zoom-out-bold" />
+                      </IconButton>
                     </Tooltip>
-                    <Typography variant="caption" sx={{ minWidth: 32, textAlign: 'center' }}>
-                      {Math.round(zoomLevel * 100)}%
-                    </Typography>
+                    <Typography variant="caption">{Math.round(zoomLevel * 100)}%</Typography>
                     <Tooltip title="Zoom In">
-                      <span>
-                        <IconButton
-                          size="small"
-                          disabled={isScanning}
-                          onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.2))}
-                        >
-                          <Iconify icon="solar:magnifer-zoom-in-bold" />
-                        </IconButton>
-                      </span>
+                      <IconButton size="small" onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.2))}>
+                        <Iconify icon="solar:magnifer-zoom-in-bold" />
+                      </IconButton>
                     </Tooltip>
                     <Tooltip title="Reset Zoom">
-                      <span>
-                        <IconButton size="small" disabled={isScanning} onClick={() => setZoomLevel(1)}>
-                          <Iconify icon="solar:restart-bold" />
-                        </IconButton>
-                      </span>
+                      <IconButton size="small" onClick={() => setZoomLevel(1)}>
+                        <Iconify icon="solar:restart-bold" />
+                      </IconButton>
                     </Tooltip>
 
                     <Button
                       size="small"
                       color="error"
                       variant="outlined"
-                      disabled={isScanning}
                       startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                       onClick={handleReset}
-                      sx={{ ml: 0.5 }}
+                      sx={{ ml: 1 }}
                     >
                       Retake
                     </Button>
@@ -730,10 +649,9 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
 
                 <Box
                   sx={{
-                    position: 'relative',
                     flex: 1,
-                    minHeight: { xs: 320, sm: 380 },
-                    overflow: 'hidden',
+                    overflow: 'auto',
+                    p: 2,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -745,167 +663,14 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                     alt="Prescription Scan"
                     style={{
                       transform: `scale(${zoomLevel})`,
-                      transformOrigin: 'center center',
-                      transition: 'filter 0.3s ease, transform 0.15s ease-out',
+                      transformOrigin: 'top center',
+                      transition: 'transform 0.15s ease-out',
                       maxWidth: '100%',
                       maxHeight: '100%',
-                      objectFit: 'contain',
                       borderRadius: 6,
                       boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                      filter: isScanning ? 'brightness(0.65) blur(0.5px)' : 'none',
                     }}
                   />
-
-                  {/* High-Tech AI Scanning Overlay (Visible on mobile & desktop) */}
-                  {isScanning && (
-                    <>
-                      {/* Animated Laser Scanning Beam */}
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          left: 0,
-                          right: 0,
-                          height: { xs: 3, sm: 4 },
-                          background: (theme) =>
-                            `linear-gradient(90deg, transparent 0%, ${theme.palette.primary.main} 25%, ${theme.palette.primary.light} 50%, ${theme.palette.primary.main} 75%, transparent 100%)`,
-                          boxShadow: (theme) =>
-                            `0 0 16px 4px ${theme.palette.primary.main}, 0 0 32px 8px ${theme.palette.primary.lighter || theme.palette.primary.main}`,
-                          animation: 'rxScannerLaser 2.4s ease-in-out infinite alternate',
-                          zIndex: 3,
-                          pointerEvents: 'none',
-                          '@keyframes rxScannerLaser': {
-                            '0%': { top: '6%', opacity: 0.3 },
-                            '15%': { opacity: 1 },
-                            '85%': { opacity: 1 },
-                            '100%': { top: '94%', opacity: 0.3 },
-                          },
-                        }}
-                      />
-
-                      {/* Backdrop & Center HUD Loading Card */}
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          inset: 0,
-                          bgcolor: 'rgba(8, 12, 20, 0.52)',
-                          backdropFilter: 'blur(3px)',
-                          WebkitBackdropFilter: 'blur(3px)',
-                          zIndex: 4,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          p: { xs: 2, sm: 3 },
-                        }}
-                      >
-                        <Card
-                          sx={{
-                            maxWidth: 380,
-                            width: '100%',
-                            p: { xs: 2.5, sm: 3 },
-                            bgcolor: 'rgba(18, 24, 38, 0.92)',
-                            backdropFilter: 'blur(16px)',
-                            WebkitBackdropFilter: 'blur(16px)',
-                            border: '1px solid rgba(255, 255, 255, 0.14)',
-                            boxShadow: '0 16px 40px 0 rgba(0, 0, 0, 0.65)',
-                            textAlign: 'center',
-                            color: 'common.white',
-                            borderRadius: 2.5,
-                          }}
-                        >
-                          {/* Animated AI Pulse Icon */}
-                          <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
-                            <CircularProgress
-                              size={62}
-                              thickness={4}
-                              sx={{
-                                color: 'primary.main',
-                                '& .MuiCircularProgress-circle': {
-                                  strokeLinecap: 'round',
-                                },
-                              }}
-                            />
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <Iconify
-                                icon="solar:magic-stick-3-bold"
-                                width={28}
-                                sx={{
-                                  color: 'primary.light',
-                                  animation: 'pulseAiIcon 1.6s ease-in-out infinite',
-                                  '@keyframes pulseAiIcon': {
-                                    '0%': { transform: 'scale(0.9)', opacity: 0.8 },
-                                    '50%': { transform: 'scale(1.15)', opacity: 1 },
-                                    '100%': { transform: 'scale(0.9)', opacity: 0.8 },
-                                  },
-                                }}
-                              />
-                            </Box>
-                          </Box>
-
-                          <Typography
-                            variant="subtitle1"
-                            sx={{
-                              color: 'common.white',
-                              fontWeight: 700,
-                              fontSize: { xs: 16, sm: 18 },
-                              mb: 0.5,
-                            }}
-                          >
-                            Reading Prescription with AI
-                          </Typography>
-
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: 'grey.300',
-                              fontSize: { xs: 13, sm: 14 },
-                              mb: 2.2,
-                              minHeight: 40,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {scanProgressText || 'Deciphering doctor handwriting & clinical dosages...'}
-                          </Typography>
-
-                          <LinearProgress
-                            color="primary"
-                            sx={{
-                              height: 6,
-                              borderRadius: 3,
-                              bgcolor: 'rgba(255, 255, 255, 0.12)',
-                              '& .MuiLinearProgress-bar': {
-                                borderRadius: 3,
-                              },
-                            }}
-                          />
-
-                          <Stack
-                            direction="row"
-                            spacing={0.75}
-                            justifyContent="center"
-                            alignItems="center"
-                            sx={{ mt: 1.8 }}
-                          >
-                            <Iconify icon="solar:shield-check-bold" width={16} sx={{ color: 'primary.light' }} />
-                            <Typography variant="caption" sx={{ color: 'grey.400', fontSize: { xs: 11, sm: 12 } }}>
-                              Matching medicines & active stock batches
-                            </Typography>
-                          </Stack>
-                        </Card>
-                      </Box>
-                    </>
-                  )}
                 </Box>
               </Box>
             )}
@@ -916,8 +681,8 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
             xs={12}
             md={7}
             sx={{
-              display: showRightPane ? 'flex' : 'none',
-              height: { xs: '100%', md: '100%' },
+              display: isMobile && scanResult && mobileTab === 'image' ? 'none' : 'flex',
+              height: { xs: 'auto', md: '100%' },
               minHeight: 0,
               flexDirection: 'column',
               bgcolor: 'background.paper',
