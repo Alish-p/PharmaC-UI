@@ -79,8 +79,75 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
     triggerScan(file, base64, false);
   };
 
+  // Helper to optimize/compress large smartphone camera images before upload
+  const compressImage = (file) =>
+    new Promise((resolve) => {
+      // If image is already reasonably sized (< 1.5MB), use as-is
+      if (file.size <= 1.5 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ file, base64: reader.result });
+        reader.onerror = () => resolve({ file, base64: null });
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const maxDimension = 2048;
+        let { width, height } = img;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              const reader = new FileReader();
+              reader.onload = () => resolve({ file, base64: reader.result });
+              reader.readAsDataURL(file);
+              return;
+            }
+
+            const compressedFile = new File([blob], `${file.name.replace(/\.[^/.]+$/, '')}.jpg`, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            const base64 = canvas.toDataURL('image/jpeg', 0.85);
+            resolve({ file: compressedFile, base64 });
+          },
+          'image/jpeg',
+          0.85
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        const reader = new FileReader();
+        reader.onload = () => resolve({ file, base64: reader.result });
+        reader.readAsDataURL(file);
+      };
+
+      img.src = objectUrl;
+    });
+
   // Handle file drop/upload
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -90,16 +157,14 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
     }
 
     const previewUrl = URL.createObjectURL(file);
-    setImageFile(file);
     setImagePreview(previewUrl);
 
-    // Read base64
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageBase64(reader.result);
-      triggerScan(file, reader.result, false);
-    };
-    reader.readAsDataURL(file);
+    // Compress large smartphone camera photos in the background (100ms)
+    const { file: processedFile, base64 } = await compressImage(file);
+    setImageFile(processedFile);
+    if (base64) setImageBase64(base64);
+
+    triggerScan(processedFile, base64, false);
   };
 
   // Trigger scanning API
@@ -184,7 +249,8 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
         return;
       }
 
-      toast.error(err.message || 'Failed to scan prescription');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to scan prescription';
+      toast.error(errorMessage);
     } finally {
       setIsScanning(false);
       setScanProgressText('');
