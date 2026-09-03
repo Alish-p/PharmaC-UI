@@ -12,10 +12,11 @@ import LoadingButton from '@mui/lab/LoadingButton';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import axios, { endpoints } from 'src/utils/axios';
-import { useAuthContext } from 'src/auth/hooks';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
+
+import { useAuthContext } from 'src/auth/hooks';
 
 export default function PharmacySettingsPage() {
   const { tenant } = useAuthContext();
@@ -56,7 +57,7 @@ export default function PharmacySettingsPage() {
       try {
         setLoading(true);
         const res = await axios.get(endpoints.tenants);
-        const data = res.data;
+        const {data} = res;
         setFormData({
           name: data.name || '',
           tagline: data.tagline || '',

@@ -31,6 +31,9 @@ export const endpoints = {
   customers: '/api/customers',
   users: '/api/users',
   tenants: '/api/tenants',
+  prescriptions: {
+    scan: '/api/prescriptions/scan',
+  },
   dashboard: {
     summary: '/api/dashboard/summary',
   },

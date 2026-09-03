@@ -5,6 +5,7 @@ import { CONFIG } from 'src/config-global';
 import { DashboardLayout } from 'src/layouts/dashboard';
 
 import { LoadingScreen } from 'src/components/loading-screen';
+
 import { AuthGuard } from 'src/auth/guard';
 
 // ----------------------------------------------------------------------
@@ -14,6 +15,7 @@ const OverviewPage = lazy(() => import('src/pages/dashboard/overview'));
 const MedicinesListPage = lazy(() => import('src/pages/dashboard/medicine/list'));
 const BatchesListPage = lazy(() => import('src/pages/dashboard/batch/list'));
 const PosBillingPage = lazy(() => import('src/pages/dashboard/pos/index'));
+const PrescriptionPage = lazy(() => import('src/pages/dashboard/prescription/index'));
 const SuppliersListPage = lazy(() => import('src/pages/dashboard/supplier/list'));
 const CustomersListPage = lazy(() => import('src/pages/dashboard/customer/list'));
 const StaffListPage = lazy(() => import('src/pages/dashboard/user/list'));
@@ -41,6 +43,7 @@ export const dashboardRoutes = [
       { path: 'medicine', element: <MedicinesListPage /> },
       { path: 'batch', element: <BatchesListPage /> },
       { path: 'pos', element: <PosBillingPage /> },
+      { path: 'prescription', element: <PrescriptionPage /> },
       { path: 'supplier', element: <SuppliersListPage /> },
       { path: 'customer', element: <CustomersListPage /> },
       { path: 'user', element: <StaffListPage /> },

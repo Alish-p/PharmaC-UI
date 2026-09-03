@@ -97,6 +97,9 @@ export const paths = {
     pos: {
       root: `${ROOTS.DASHBOARD}/pos`,
     },
+    prescription: {
+      root: `${ROOTS.DASHBOARD}/prescription`,
+    },
     supplier: {
       root: `${ROOTS.DASHBOARD}/supplier`,
       list: `${ROOTS.DASHBOARD}/supplier`,

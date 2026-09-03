@@ -26,6 +26,8 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import PrescriptionScannerDialog from 'src/sections/prescription/prescription-scanner-dialog';
+
 export default function PosBillingPage() {
 
   const [batches, setBatches] = useState([]);
@@ -34,6 +36,7 @@ export default function PosBillingPage() {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [cart, setCart] = useState([]);
   const [paymentMode, setPaymentMode] = useState('Cash');
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -42,14 +45,65 @@ export default function PosBillingPage() {
           axios.get(endpoints.batches, { params: { status: 'active' } }),
           axios.get(endpoints.customers),
         ]);
-        setBatches(batchesRes.data.data || []);
-        setCustomers(custRes.data.data || []);
+        const activeBatches = batchesRes.data.data || [];
+        const activeCusts = custRes.data.data || [];
+        setBatches(activeBatches);
+        setCustomers(activeCusts);
+
+        // Check if a pending prescription was handed over from Prescriptions page
+        const pendingStr = sessionStorage.getItem('pharmac_pending_prescription_bill');
+        if (pendingStr) {
+          try {
+            const { items, customer } = JSON.parse(pendingStr);
+            if (items?.length > 0) {
+              applyPrescriptionItems(items, customer);
+            }
+          } catch (e) {
+            console.error('Error applying pending prescription:', e);
+          } finally {
+            sessionStorage.removeItem('pharmac_pending_prescription_bill');
+          }
+        }
       } catch (err) {
         console.error(err);
       }
     }
     loadData();
   }, []);
+
+  const applyPrescriptionItems = (itemsToAdd, patientCustomer) => {
+    if (!itemsToAdd || itemsToAdd.length === 0) return;
+
+    setCart((prevCart) => {
+      const updated = [...prevCart];
+
+      itemsToAdd.forEach((item) => {
+        const existingIdx = updated.findIndex((c) => c.batchId === item.batchId);
+        if (existingIdx >= 0) {
+          updated[existingIdx].qty += item.qty || 1;
+        } else {
+          updated.push({
+            batchId: item.batchId,
+            batchNumber: item.batchNumber,
+            medicineName: item.medicine?.name || item.prescribedItem?.name || 'Medicine',
+            genericName: item.medicine?.genericName || item.prescribedItem?.activeIngredient || '',
+            unit: item.medicine?.unit || 'Strip',
+            maxStock: item.medicine?.totalStock || 999,
+            price: item.price,
+            gstRate: item.gstRate || 12,
+            qty: item.qty || 1,
+            prescribedNote: item.isSubstitute ? 'Salt Substitute' : 'Prescribed',
+          });
+        }
+      });
+
+      return updated;
+    });
+
+    if (patientCustomer?._id) {
+      setSelectedCustomer(patientCustomer._id);
+    }
+  };
 
   const handleAddToCart = () => {
     if (!selectedBatchId) {
@@ -129,11 +183,30 @@ export default function PosBillingPage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Stack sx={{ mb: 3 }}>
-        <Typography variant="h4">POS Counter & Rapid Billing</Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-          Search medicine batches, dispense prescriptions, and generate instant customer invoices
-        </Typography>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        justifyContent="space-between"
+        spacing={2}
+        sx={{ mb: 3 }}
+      >
+        <div>
+          <Typography variant="h4">POS Counter & Rapid Billing</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Search medicine batches, dispense prescriptions, and generate instant customer invoices
+          </Typography>
+        </div>
+
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          startIcon={<Iconify icon="solar:camera-bold" />}
+          onClick={() => setScannerOpen(true)}
+          sx={{ height: 46, px: 2.5, boxShadow: '0 4px 14px rgba(0, 167, 111, 0.35)' }}
+        >
+          Scan / Upload Prescription
+        </Button>
       </Stack>
 
       <Grid container spacing={3}>
@@ -163,9 +236,19 @@ export default function PosBillingPage() {
                 color="primary"
                 startIcon={<Iconify icon="solar:cart-plus-bold" />}
                 onClick={handleAddToCart}
-                sx={{ minWidth: 160, height: 54 }}
+                sx={{ minWidth: 140, height: 54 }}
               >
-                Add to Cart
+                Add Item
+              </Button>
+
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<Iconify icon="solar:camera-bold" />}
+                onClick={() => setScannerOpen(true)}
+                sx={{ minWidth: 150, height: 54, whiteSpace: 'nowrap' }}
+              >
+                Scan Rx (AI)
               </Button>
             </Stack>
           </Card>
@@ -319,6 +402,13 @@ export default function PosBillingPage() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Prescription Scanner Dialog */}
+      <PrescriptionScannerDialog
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onApplyToBill={applyPrescriptionItems}
+      />
     </Container>
   );
 }

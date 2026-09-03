@@ -1,4 +1,5 @@
 import { paths } from 'src/routes/paths';
+
 import { Iconify } from '../components/iconify';
 
 // ----------------------------------------------------------------------
@@ -8,6 +9,7 @@ const ICONS = {
   medicine: <Iconify icon="solar:pill-bold-duotone" />,
   batch: <Iconify icon="solar:box-minimalistic-bold-duotone" />,
   pos: <Iconify icon="solar:cart-large-4-bold-duotone" />,
+  prescription: <Iconify icon="solar:document-medicine-bold-duotone" />,
   supplier: <Iconify icon="solar:shop-2-bold-duotone" />,
   customer: <Iconify icon="solar:users-group-two-rounded-bold-duotone" />,
   user: <Iconify icon="solar:shield-user-bold-duotone" />,
@@ -47,6 +49,11 @@ export const navData = [
         title: 'POS Billing',
         path: paths.dashboard.pos.root,
         icon: ICONS.pos,
+      },
+      {
+        title: 'Prescriptions (AI Scan)',
+        path: paths.dashboard.prescription.root,
+        icon: ICONS.prescription,
       },
     ],
   },
