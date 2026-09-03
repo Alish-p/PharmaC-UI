@@ -19,7 +19,6 @@ import InputLabel from '@mui/material/InputLabel';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
 import DialogContent from '@mui/material/DialogContent';
-import LinearProgress from '@mui/material/LinearProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
@@ -424,20 +423,6 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
             </IconButton>
           </Stack>
         </Stack>
-
-        {/* Minimal header progress indicator when AI is actively scanning */}
-        {isScanning && (
-          <LinearProgress
-            sx={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 3,
-              zIndex: 9,
-            }}
-          />
-        )}
       </DialogTitle>
 
       {/* Mobile Switcher Tab when prescription is scanned */}
@@ -677,45 +662,6 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                       boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
                     }}
                   />
-
-                  {/* Minimal Floating AI Processing Pill for smaller devices & desktop */}
-                  {isScanning && (
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      spacing={1}
-                      sx={{
-                        position: 'absolute',
-                        bottom: 12,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        bgcolor: 'rgba(22, 28, 36, 0.88)',
-                        backdropFilter: 'blur(8px)',
-                        border: '1px solid rgba(255, 255, 255, 0.16)',
-                        boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)',
-                        px: 1.8,
-                        py: 0.75,
-                        borderRadius: 3,
-                        zIndex: 3,
-                        maxWidth: '92%',
-                      }}
-                    >
-                      <CircularProgress size={14} thickness={5} sx={{ color: 'primary.light' }} />
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: 'common.white',
-                          fontWeight: 600,
-                          fontSize: { xs: 11, sm: 12 },
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {scanProgressText || 'AI reading prescription...'}
-                      </Typography>
-                    </Stack>
-                  )}
                 </Box>
               </Box>
             )}
@@ -785,7 +731,6 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                   variant="caption"
                   sx={{
                     color: 'text.secondary',
-                    mb: { xs: 2, sm: 2.5 },
                     maxWidth: 340,
                     px: 1,
                     display: 'inline-block',
@@ -794,10 +739,6 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                 >
                   {scanProgressText || 'Deciphering doctor handwriting, brands, and dosage strengths...'}
                 </Typography>
-
-                <Box sx={{ width: { xs: '80%', sm: '60%' }, maxWidth: 320 }}>
-                  <LinearProgress sx={{ height: 4, borderRadius: 2 }} />
-                </Box>
               </Box>
             ) : !scanResult ? (
               <Box
