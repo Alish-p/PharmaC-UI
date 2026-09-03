@@ -96,7 +96,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
 
       img.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        const maxDimension = 2048;
+        const maxDimension = 1536;
         let { width, height } = img;
 
         if (width > maxDimension || height > maxDimension) {
@@ -128,11 +128,11 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
               type: 'image/jpeg',
               lastModified: Date.now(),
             });
-            const base64 = canvas.toDataURL('image/jpeg', 0.85);
+            const base64 = canvas.toDataURL('image/jpeg', 0.82);
             resolve({ file: compressedFile, base64 });
           },
           'image/jpeg',
-          0.85
+          0.82
         );
       };
 
