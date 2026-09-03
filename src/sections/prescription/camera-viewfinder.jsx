@@ -10,13 +10,17 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { useResponsive } from 'src/hooks/use-responsive';
+
 import { Iconify } from 'src/components/iconify';
 
 export default function CameraViewfinder({ onCapture, onCancel }) {
+  const isMobile = useResponsive('down', 'sm');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
-  const [stream, setStream] = useState(null);
+  const [, setStream] = useState(null);
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
@@ -24,13 +28,20 @@ export default function CameraViewfinder({ onCapture, onCancel }) {
   const [cameraError, setCameraError] = useState('');
   const [countdown, setCountdown] = useState(null);
 
-  // Stop active media tracks
+  // Stop active media tracks safely
   const stopStream = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {
+          console.error(e);
+        }
+      });
+      streamRef.current = null;
     }
-  }, [stream]);
+    setStream(null);
+  }, []);
 
   // Start video stream
   const startCamera = useCallback(
@@ -49,6 +60,7 @@ export default function CameraViewfinder({ onCapture, onCancel }) {
         };
 
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = mediaStream;
         setStream(mediaStream);
 
         if (videoRef.current) {
@@ -84,7 +96,16 @@ export default function CameraViewfinder({ onCapture, onCancel }) {
   useEffect(() => {
     startCamera(facingMode);
     return () => {
-      stopStream();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (e) {
+            console.error(e);
+          }
+        });
+        streamRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -229,78 +250,127 @@ export default function CameraViewfinder({ onCapture, onCancel }) {
       </Box>
 
       {/* Camera Controls Bar */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
+      <Box
         sx={{
-          p: 2,
+          p: { xs: 1.5, sm: 2 },
           bgcolor: 'rgba(15, 23, 42, 0.95)',
           color: 'common.white',
         }}
       >
-        <Stack direction="row" spacing={1} alignItems="center">
-          {devices.length > 1 && (
-            <Select
-              size="small"
-              value={selectedDeviceId}
-              onChange={handleDeviceChange}
+        {isMobile ? (
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-around"
+            sx={{ width: '100%', py: 0.5 }}
+          >
+            <IconButton
+              size="medium"
+              onClick={handleCaptureWithTimer}
+              disabled={loading || !!cameraError}
+              sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.12)' }}
+              title="3s Timer"
+            >
+              <Iconify icon="solar:clock-circle-bold" width={24} />
+            </IconButton>
+
+            {/* Big Circular Native Shutter Button */}
+            <IconButton
+              onClick={captureFrame}
+              disabled={loading || !!cameraError}
               sx={{
+                width: 68,
+                height: 68,
+                bgcolor: 'error.main',
                 color: 'white',
-                bgcolor: 'rgba(255,255,255,0.1)',
-                '& .MuiSelect-icon': { color: 'white' },
-                fontSize: 12,
-                maxWidth: 160,
+                border: '4px solid rgba(255,255,255,0.85)',
+                boxShadow: '0 0 20px rgba(255, 76, 76, 0.6)',
+                '&:hover': { bgcolor: 'error.dark' },
               }}
             >
-              {devices.map((d, idx) => (
-                <MenuItem key={d.deviceId} value={d.deviceId}>
-                  {d.label || `Camera ${idx + 1}`}
-                </MenuItem>
-              ))}
-            </Select>
-          )}
+              <Iconify icon="solar:camera-bold" width={32} />
+            </IconButton>
 
-          <IconButton size="small" onClick={handleFlipCamera} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }} title="Flip Camera">
-            <Iconify icon="solar:camera-rotate-bold" />
-          </IconButton>
-        </Stack>
+            <IconButton
+              size="medium"
+              onClick={handleFlipCamera}
+              sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.12)' }}
+              title="Flip Camera"
+            >
+              <Iconify icon="solar:camera-rotate-bold" width={24} />
+            </IconButton>
+          </Stack>
+        ) : (
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={1} alignItems="center">
+              {devices.length > 1 && (
+                <Select
+                  size="small"
+                  value={selectedDeviceId}
+                  onChange={handleDeviceChange}
+                  sx={{
+                    color: 'white',
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    '& .MuiSelect-icon': { color: 'white' },
+                    fontSize: 12,
+                    maxWidth: 160,
+                  }}
+                >
+                  {devices.map((d, idx) => (
+                    <MenuItem key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Camera ${idx + 1}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
 
-        {/* Main Capture Button */}
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <IconButton
-            size="small"
-            onClick={handleCaptureWithTimer}
-            disabled={loading || !!cameraError}
-            sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}
-            title="3s Timer"
-          >
-            <Iconify icon="solar:clock-circle-bold" />
-          </IconButton>
+              <IconButton
+                size="small"
+                onClick={handleFlipCamera}
+                sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}
+                title="Flip Camera"
+              >
+                <Iconify icon="solar:camera-rotate-bold" />
+              </IconButton>
+            </Stack>
 
-          <Button
-            variant="contained"
-            color="error"
-            size="large"
-            disabled={loading || !!cameraError}
-            onClick={captureFrame}
-            startIcon={<Iconify icon="solar:camera-bold" />}
-            sx={{
-              borderRadius: 3,
-              px: 3,
-              py: 1.2,
-              fontWeight: 700,
-              boxShadow: '0 0 15px rgba(255, 76, 76, 0.4)',
-            }}
-          >
-            Snap Photo
-          </Button>
-        </Stack>
+            {/* Main Capture Button */}
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <IconButton
+                size="small"
+                onClick={handleCaptureWithTimer}
+                disabled={loading || !!cameraError}
+                sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}
+                title="3s Timer"
+              >
+                <Iconify icon="solar:clock-circle-bold" />
+              </IconButton>
 
-        <Button color="inherit" size="small" onClick={onCancel}>
-          Cancel
-        </Button>
-      </Stack>
+              <Button
+                variant="contained"
+                color="error"
+                size="large"
+                disabled={loading || !!cameraError}
+                onClick={captureFrame}
+                startIcon={<Iconify icon="solar:camera-bold" />}
+                sx={{
+                  borderRadius: 3,
+                  px: 3,
+                  py: 1.2,
+                  fontWeight: 700,
+                  boxShadow: '0 0 15px rgba(255, 76, 76, 0.4)',
+                }}
+              >
+                Snap Photo
+              </Button>
+            </Stack>
+
+            <Button color="inherit" size="small" onClick={onCancel}>
+              Cancel
+            </Button>
+          </Stack>
+        )}
+      </Box>
     </Box>
   );
 }

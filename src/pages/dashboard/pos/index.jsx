@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
@@ -183,31 +184,12 @@ export default function PosBillingPage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        justifyContent="space-between"
-        spacing={2}
-        sx={{ mb: 3 }}
-      >
-        <div>
-          <Typography variant="h4">POS Counter & Rapid Billing</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Search medicine batches, dispense prescriptions, and generate instant customer invoices
-          </Typography>
-        </div>
-
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          startIcon={<Iconify icon="solar:camera-bold" />}
-          onClick={() => setScannerOpen(true)}
-          sx={{ height: 46, px: 2.5, boxShadow: '0 4px 14px rgba(0, 167, 111, 0.35)' }}
-        >
-          Scan / Upload Prescription
-        </Button>
-      </Stack>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4">POS Counter & Rapid Billing</Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          Search medicine batches, dispense prescriptions, and generate instant customer invoices
+        </Typography>
+      </Box>
 
       <Grid container spacing={3}>
         {/* Left Side: Product Selection & Bill Items */}
@@ -225,7 +207,7 @@ export default function PosBillingPage() {
                   <MenuItem value="">-- Select Medicine Batch --</MenuItem>
                   {batches.map((b) => (
                     <MenuItem key={b._id} value={b._id} disabled={b.quantity <= 0}>
-                      {b.medicine?.name} ({b.medicine?.genericName}) • Batch: {b.batchNumber} • Stock: {b.quantity} • ₹{b.salePrice}
+                      {(b.medicine?.name || b.medicineId?.name || 'Medicine')} ({(b.medicine?.genericName || b.medicineId?.strength || '')}) • Batch: {b.batchNumber} • Stock: {b.quantity} • ₹{b.salePrice}
                     </MenuItem>
                   ))}
                 </Select>
@@ -233,10 +215,11 @@ export default function PosBillingPage() {
 
               <Button
                 variant="contained"
-                color="primary"
+                color="inherit"
                 startIcon={<Iconify icon="solar:cart-plus-bold" />}
                 onClick={handleAddToCart}
-                sx={{ minWidth: 140, height: 54 }}
+                disabled={!selectedBatchId}
+                sx={{ minWidth: { xs: '100%', sm: 130 }, height: 54, whiteSpace: 'nowrap' }}
               >
                 Add Item
               </Button>
@@ -246,7 +229,7 @@ export default function PosBillingPage() {
                 color="primary"
                 startIcon={<Iconify icon="solar:camera-bold" />}
                 onClick={() => setScannerOpen(true)}
-                sx={{ minWidth: 150, height: 54, whiteSpace: 'nowrap' }}
+                sx={{ minWidth: { xs: '100%', sm: 150 }, height: 54, whiteSpace: 'nowrap' }}
               >
                 Scan Rx (AI)
               </Button>
@@ -404,11 +387,13 @@ export default function PosBillingPage() {
       </Grid>
 
       {/* Prescription Scanner Dialog */}
-      <PrescriptionScannerDialog
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onApplyToBill={applyPrescriptionItems}
-      />
+      {scannerOpen && (
+        <PrescriptionScannerDialog
+          open={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onApplyToBill={applyPrescriptionItems}
+        />
+      )}
     </Container>
   );
 }

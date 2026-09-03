@@ -39,36 +39,17 @@ export default function PrescriptionWorkbenchPage() {
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       {/* Header */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        justifyContent="space-between"
-        spacing={2}
-        sx={{ mb: 4 }}
-      >
-        <div>
-          <Typography variant="h4">AI Prescription Reader & Inventory Matcher</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Decipher handwritten prescriptions with Google Gemini Vision and automatically match stock batches
-          </Typography>
-        </div>
-
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          startIcon={<Iconify icon="solar:camera-bold" />}
-          onClick={() => setScannerOpen(true)}
-          sx={{ height: 48, px: 3, boxShadow: '0 4px 14px rgba(0, 167, 111, 0.35)' }}
-        >
-          Scan / Upload Prescription
-        </Button>
-      </Stack>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4">AI Prescription Reader & Inventory Matcher</Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          Decipher handwritten prescriptions with Google Gemini Vision and automatically match stock batches
+        </Typography>
+      </Box>
 
       {/* Interactive Launch Card */}
       <Card
         sx={{
-          p: 6,
+          p: { xs: 3, sm: 6 },
           textAlign: 'center',
           bgcolor: 'background.neutral',
           border: '2px dashed',
@@ -79,8 +60,8 @@ export default function PrescriptionWorkbenchPage() {
         <CardContent sx={{ p: 0 }}>
           <Box
             sx={{
-              width: 80,
-              height: 80,
+              width: { xs: 64, sm: 80 },
+              height: { xs: 64, sm: 80 },
               borderRadius: '50%',
               bgcolor: 'primary.main',
               color: 'common.white',
@@ -92,10 +73,10 @@ export default function PrescriptionWorkbenchPage() {
               boxShadow: '0 8px 24px rgba(0, 167, 111, 0.4)',
             }}
           >
-            <Iconify icon="solar:scanner-bold-duotone" width={44} />
+            <Iconify icon="solar:scanner-bold-duotone" width={36} />
           </Box>
 
-          <Typography variant="h5" sx={{ mb: 1 }}>
+          <Typography variant="h5" sx={{ mb: 1, fontSize: { xs: 18, sm: 24 } }}>
             Ready to Scan a Medical Prescription?
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 520, mx: 'auto', mb: 3 }}>
@@ -109,7 +90,7 @@ export default function PrescriptionWorkbenchPage() {
               size="large"
               startIcon={<Iconify icon="solar:camera-bold" />}
               onClick={() => setScannerOpen(true)}
-              sx={{ px: 3.5, py: 1.2 }}
+              sx={{ px: 3.5, py: 1.2, width: { xs: '100%', sm: 'auto' } }}
             >
               Open Camera & Scanner
             </Button>
@@ -118,11 +99,13 @@ export default function PrescriptionWorkbenchPage() {
       </Card>
 
       {/* Scanner Dialog */}
-      <PrescriptionScannerDialog
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onApplyToBill={handleApplyToBill}
-      />
+      {scannerOpen && (
+        <PrescriptionScannerDialog
+          open={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onApplyToBill={handleApplyToBill}
+        />
+      )}
     </Container>
   );
 }

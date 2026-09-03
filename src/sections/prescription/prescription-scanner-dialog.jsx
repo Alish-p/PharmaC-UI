@@ -23,6 +23,8 @@ import LinearProgress from '@mui/material/LinearProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { useResponsive } from 'src/hooks/use-responsive';
+
 import axios, { endpoints } from 'src/utils/axios';
 import { fCurrency } from 'src/utils/format-number';
 
@@ -33,7 +35,11 @@ import { Iconify } from 'src/components/iconify';
 import CameraViewfinder from './camera-viewfinder';
 
 export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill }) {
-  const [sourceMode, setSourceMode] = useState('camera'); // 'camera' | 'upload'
+  const isMobile = useResponsive('down', 'md');
+  const isSmMobile = useResponsive('down', 'sm');
+
+  const [sourceMode, setSourceMode] = useState('upload'); // 'upload' | 'camera'
+  const [mobileTab, setMobileTab] = useState('medicines'); // 'medicines' | 'image'
   const [, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [, setImageBase64] = useState('');
@@ -56,6 +62,8 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
     setIsScanning(false);
     setScanResult(null);
     setSelectedItems({});
+    setSourceMode('upload');
+    setMobileTab('medicines');
   }, []);
 
   const handleClose = () => {
@@ -282,63 +290,108 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
     <Dialog
       open={open}
       onClose={handleClose}
+      fullScreen={isMobile}
       maxWidth="xl"
       fullWidth
       PaperProps={{
         sx: {
-          height: { xs: '96vh', md: '92vh' },
-          maxHeight: '96vh',
+          height: isMobile ? '100%' : '92vh',
+          maxHeight: isMobile ? '100%' : '94vh',
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: 2,
+          borderRadius: isMobile ? 0 : 2,
         },
       }}
     >
       {/* Dialog Header */}
-      <DialogTitle sx={{ px: 3, py: 2, borderBottom: (t) => `1px solid ${t.palette.divider}` }}>
+      <DialogTitle sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 }, borderBottom: (t) => `1px solid ${t.palette.divider}` }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Box
               sx={{
-                width: 42,
-                height: 42,
+                width: { xs: 36, sm: 42 },
+                height: { xs: 36, sm: 42 },
                 borderRadius: 1.5,
                 bgcolor: 'primary.lighter',
                 color: 'primary.main',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
-              <Iconify icon="solar:document-medicine-bold-duotone" width={26} />
+              <Iconify icon="solar:document-medicine-bold-duotone" width={isSmMobile ? 22 : 26} />
             </Box>
             <div>
-              <Typography variant="h6">AI Prescription Scanner & Medicine Matcher</Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Capture or upload handwritten prescriptions to instantly identify medicines, salt compositions, and live stock batches
+              <Typography variant="subtitle1" sx={{ fontSize: { xs: 15, sm: 18 }, fontWeight: 700, lineHeight: 1.2 }}>
+                {isSmMobile ? 'Rx Scanner' : 'AI Prescription Scanner'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: { xs: 'none', md: 'block' } }}>
+                Capture or upload prescriptions to match pharmacy batches
               </Typography>
             </div>
           </Stack>
 
           <Stack direction="row" spacing={1} alignItems="center">
             {/* Demo Simulation Button for testing */}
-            <Button
-              size="small"
-              variant="outlined"
-              color="inherit"
-              startIcon={<Iconify icon="solar:magic-stick-3-bold" />}
-              onClick={() => triggerScan(null, null, true)}
-              disabled={isScanning}
-            >
-              Test Sample Prescription
-            </Button>
+            <Tooltip title="Test Sample Prescription">
+              <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                startIcon={<Iconify icon="solar:magic-stick-3-bold" />}
+                onClick={() => triggerScan(null, null, true)}
+                disabled={isScanning}
+                sx={{ fontSize: { xs: 11, sm: 13 }, px: { xs: 1, sm: 1.5 }, py: { xs: 0.3, sm: 0.8 } }}
+              >
+                {isSmMobile ? 'Sample' : 'Test Sample'}
+              </Button>
+            </Tooltip>
 
-            <IconButton onClick={handleClose} size="small">
-              <Iconify icon="solar:close-circle-bold" />
+            <IconButton onClick={handleClose} size="small" edge="end">
+              <Iconify icon="solar:close-circle-bold" width={24} />
             </IconButton>
           </Stack>
         </Stack>
       </DialogTitle>
+
+      {/* Mobile Switcher Tab when prescription is scanned */}
+      {isMobile && imagePreview && scanResult && (
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            p: 1.2,
+            bgcolor: 'background.neutral',
+            borderBottom: (t) => `1px solid ${t.palette.divider}`,
+            flexShrink: 0,
+          }}
+        >
+          <Button
+            fullWidth
+            size="small"
+            variant={mobileTab === 'medicines' ? 'contained' : 'outlined'}
+            color="primary"
+            startIcon={<Iconify icon="solar:pill-bold" />}
+            onClick={() => setMobileTab('medicines')}
+            sx={{ fontWeight: 600 }}
+          >
+            Medicines ({scanResult.matchedMedicines?.length || 0})
+          </Button>
+
+          <Button
+            fullWidth
+            size="small"
+            variant={mobileTab === 'image' ? 'contained' : 'outlined'}
+            color="primary"
+            startIcon={<Iconify icon="solar:gallery-bold" />}
+            onClick={() => setMobileTab('image')}
+            sx={{ fontWeight: 600 }}
+          >
+            View Prescription
+          </Button>
+        </Stack>
+      )}
 
       {/* Main Content Area */}
       <DialogContent
@@ -357,14 +410,15 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
             xs={12}
             md={5}
             sx={{
+              display: isMobile && scanResult && mobileTab !== 'image' ? 'none' : 'flex',
               height: { xs: 'auto', md: '100%' },
               minHeight: 0,
               borderRight: (t) => ({ md: `1px solid ${t.palette.divider}` }),
               borderBottom: (t) => ({ xs: `1px solid ${t.palette.divider}`, md: 'none' }),
-              display: 'flex',
               flexDirection: 'column',
               bgcolor: 'background.neutral',
               overflowY: 'auto',
+              flex: isMobile && scanResult ? 1 : undefined,
               '&::-webkit-scrollbar': { width: 6 },
               '&::-webkit-scrollbar-thumb': {
                 backgroundColor: 'rgba(145, 158, 171, 0.35)',
@@ -374,7 +428,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
           >
             {/* Top Mode Selector when no image selected */}
             {!imagePreview ? (
-              <Box sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ p: { xs: 2, sm: 2.5 }, flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
                   <Button
                     fullWidth
@@ -402,10 +456,9 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                   </Box>
                 ) : (
                   <Box
-                    component="label"
                     sx={{
                       flex: 1,
-                      minHeight: 350,
+                      minHeight: { xs: 260, sm: 350 },
                       border: '2px dashed',
                       borderColor: 'primary.main',
                       borderRadius: 2,
@@ -414,22 +467,14 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      cursor: 'pointer',
-                      p: 4,
+                      p: { xs: 2.5, sm: 4 },
                       textAlign: 'center',
-                      '&:hover': { bgcolor: 'action.hover' },
                     }}
                   >
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={handleFileUpload}
-                    />
                     <Box
                       sx={{
-                        width: 72,
-                        height: 72,
+                        width: { xs: 56, sm: 72 },
+                        height: { xs: 56, sm: 72 },
                         borderRadius: '50%',
                         bgcolor: 'primary.lighter',
                         color: 'primary.main',
@@ -439,12 +484,55 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                         mb: 2,
                       }}
                     >
-                      <Iconify icon="solar:upload-square-bold" width={36} />
+                      <Iconify icon="solar:upload-square-bold" width={32} />
                     </Box>
-                    <Typography variant="subtitle1">Click to Upload or Drag & Drop</Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, maxWidth: 280 }}>
-                      Supports clear photographs or scans of prescriptions (JPG, PNG, WEBP up to 10MB)
+                    <Typography variant="subtitle1" sx={{ fontSize: { xs: 15, sm: 16 } }}>
+                      Upload Prescription Photo
                     </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, maxWidth: 280 }}>
+                      Supports clear photographs or scans of prescriptions (JPG, PNG, WEBP)
+                    </Typography>
+
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1.5}
+                      sx={{ mt: 2.5, width: '100%', maxWidth: 360 }}
+                    >
+                      {/* Native Mobile Camera Capture Button */}
+                      <Button
+                        component="label"
+                        variant="contained"
+                        color="primary"
+                        startIcon={<Iconify icon="solar:camera-bold" />}
+                        sx={{ py: 1 }}
+                      >
+                        {isSmMobile ? 'Snap Photo' : 'Take Photo (Camera)'}
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleFileUpload}
+                        />
+                      </Button>
+
+                      {/* File / Gallery Picker */}
+                      <Button
+                        component="label"
+                        variant="outlined"
+                        color="inherit"
+                        startIcon={<Iconify icon="solar:gallery-bold" />}
+                        sx={{ py: 1 }}
+                      >
+                        Choose File
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handleFileUpload}
+                        />
+                      </Button>
+                    </Stack>
                   </Box>
                 )}
               </Box>
@@ -527,9 +615,9 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
             xs={12}
             md={7}
             sx={{
+              display: isMobile && scanResult && mobileTab === 'image' ? 'none' : 'flex',
               height: { xs: 'auto', md: '100%' },
               minHeight: 0,
-              display: 'flex',
               flexDirection: 'column',
               bgcolor: 'background.paper',
               overflow: 'hidden',
@@ -767,7 +855,12 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                       >
                         <Stack spacing={1.5}>
                           {/* Top row: Checkbox, Medicine Name & Match Status */}
-                          <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+                          <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            alignItems={{ xs: 'flex-start', sm: 'center' }}
+                            justifyContent="space-between"
+                            spacing={1}
+                          >
                             <Stack direction="row" spacing={1.5} alignItems="flex-start">
                               <Checkbox
                                 checked={isChecked}
@@ -781,9 +874,35 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                               />
 
                               <div>
-                                <Typography variant="subtitle1">
-                                  {item.prescribedItem.name}
-                                </Typography>
+                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                                  <Typography variant="subtitle1">
+                                    {item.prescribedItem.name}
+                                  </Typography>
+                                  {isMobile && (
+                                    <Box sx={{ mt: 0.5 }}>
+                                      {item.matchStatus === 'exact_in_stock' && (
+                                        <Label color="success" startIcon={<Iconify icon="solar:check-circle-bold" />}>
+                                          In Stock ({item.matchedMedicine?.totalStock})
+                                        </Label>
+                                      )}
+                                      {item.matchStatus === 'salt_alternative_available' && (
+                                        <Label color="warning" startIcon={<Iconify icon="solar:transfer-horizontal-bold" />}>
+                                          Substitute
+                                        </Label>
+                                      )}
+                                      {item.matchStatus === 'exact_out_of_stock' && (
+                                        <Label color="error" startIcon={<Iconify icon="solar:close-circle-bold" />}>
+                                          Out of Stock
+                                        </Label>
+                                      )}
+                                      {item.matchStatus === 'not_in_catalog' && (
+                                        <Label color="default" startIcon={<Iconify icon="solar:question-circle-bold" />}>
+                                          Not in Catalog
+                                        </Label>
+                                      )}
+                                    </Box>
+                                  )}
+                                </Stack>
                                 <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                                   Salt: {item.prescribedItem.activeIngredient || 'Salt not determined'}
                                 </Typography>
@@ -800,32 +919,34 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                               </div>
                             </Stack>
 
-                            {/* Status Badge */}
-                            <div>
-                              {item.matchStatus === 'exact_in_stock' && (
-                                <Label color="success" startIcon={<Iconify icon="solar:check-circle-bold" />}>
-                                  In Stock ({item.matchedMedicine?.totalStock} units)
-                                </Label>
-                              )}
+                            {/* Status Badge on Desktop */}
+                            {!isMobile && (
+                              <div>
+                                {item.matchStatus === 'exact_in_stock' && (
+                                  <Label color="success" startIcon={<Iconify icon="solar:check-circle-bold" />}>
+                                    In Stock ({item.matchedMedicine?.totalStock} units)
+                                  </Label>
+                                )}
 
-                              {item.matchStatus === 'salt_alternative_available' && (
-                                <Label color="warning" startIcon={<Iconify icon="solar:transfer-horizontal-bold" />}>
-                                  Substitute In Stock
-                                </Label>
-                              )}
+                                {item.matchStatus === 'salt_alternative_available' && (
+                                  <Label color="warning" startIcon={<Iconify icon="solar:transfer-horizontal-bold" />}>
+                                    Substitute In Stock
+                                  </Label>
+                                )}
 
-                              {item.matchStatus === 'exact_out_of_stock' && (
-                                <Label color="error" startIcon={<Iconify icon="solar:close-circle-bold" />}>
-                                  Out of Stock
-                                </Label>
-                              )}
+                                {item.matchStatus === 'exact_out_of_stock' && (
+                                  <Label color="error" startIcon={<Iconify icon="solar:close-circle-bold" />}>
+                                    Out of Stock
+                                  </Label>
+                                )}
 
-                              {item.matchStatus === 'not_in_catalog' && (
-                                <Label color="default" startIcon={<Iconify icon="solar:question-circle-bold" />}>
-                                  Not in Catalog
-                                </Label>
-                              )}
-                            </div>
+                                {item.matchStatus === 'not_in_catalog' && (
+                                  <Label color="default" startIcon={<Iconify icon="solar:question-circle-bold" />}>
+                                    Not in Catalog
+                                  </Label>
+                                )}
+                              </div>
+                            )}
                           </Stack>
 
                           {/* Batch & Quantity controls when medicine is in stock or has substitute */}
@@ -867,81 +988,108 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                                   </FormControl>
                                 </Grid>
 
-                                {/* Quantity Counter */}
-                                <Grid xs={12} sm={5}>
-                                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
-                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                      Dispense Qty:
-                                    </Typography>
-                                    <IconButton
-                                      size="small"
-                                      disabled={!isChecked || (chosenState?.qty || 1) <= 1}
-                                      onClick={() => handleQtyChange(idx, -1, 999)}
-                                    >
-                                      <Iconify icon="solar:minus-circle-bold" />
-                                    </IconButton>
-                                    <Typography variant="subtitle2" sx={{ minWidth: 24, textAlign: 'center' }}>
-                                      {chosenState?.qty || 1}
-                                    </Typography>
-                                    <IconButton
-                                      size="small"
-                                      disabled={!isChecked}
-                                      onClick={() => handleQtyChange(idx, 1, 999)}
-                                    >
-                                      <Iconify icon="solar:add-circle-bold" />
-                                    </IconButton>
+                                 {/* Quantity Counter */}
+                                 <Grid xs={12} sm={5}>
+                                   <Stack
+                                     direction="row"
+                                     spacing={1}
+                                     alignItems="center"
+                                     justifyContent={{ xs: 'space-between', sm: 'flex-end' }}
+                                   >
+                                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                       Dispense Qty:
+                                     </Typography>
+                                     <Stack direction="row" spacing={0.5} alignItems="center">
+                                       <IconButton
+                                         size="small"
+                                         disabled={!isChecked || (chosenState?.qty || 1) <= 1}
+                                         onClick={() => handleQtyChange(idx, -1, 999)}
+                                         sx={{ border: (t) => `1px solid ${t.palette.divider}`, width: 32, height: 32 }}
+                                       >
+                                         <Iconify icon="solar:minus-circle-bold" />
+                                       </IconButton>
+                                       <Typography variant="subtitle2" sx={{ minWidth: 26, textAlign: 'center' }}>
+                                         {chosenState?.qty || 1}
+                                       </Typography>
+                                       <IconButton
+                                         size="small"
+                                         disabled={!isChecked}
+                                         onClick={() => handleQtyChange(idx, 1, 999)}
+                                         sx={{ border: (t) => `1px solid ${t.palette.divider}`, width: 32, height: 32 }}
+                                       >
+                                         <Iconify icon="solar:add-circle-bold" />
+                                       </IconButton>
 
-                                    {chosenState && (
-                                      <Typography variant="subtitle2" color="primary.main" sx={{ ml: 1 }}>
-                                        {fCurrency((chosenState.price || 0) * (chosenState.qty || 1))}
-                                      </Typography>
-                                    )}
-                                  </Stack>
-                                </Grid>
-                              </Grid>
-                            </Box>
-                          )}
-                        </Stack>
-                      </Card>
-                    );
-                  })}
-                </Stack>
-              </Box>
-            )}
+                                       {chosenState && (
+                                         <Typography variant="subtitle2" color="primary.main" sx={{ ml: 1, fontWeight: 700 }}>
+                                           {fCurrency((chosenState.price || 0) * (chosenState.qty || 1))}
+                                         </Typography>
+                                       )}
+                                     </Stack>
+                                   </Stack>
+                                 </Grid>
+                               </Grid>
+                             </Box>
+                           )}
+                         </Stack>
+                       </Card>
+                     );
+                   })}
+                 </Stack>
+               </Box>
+             )}
 
             {/* Bottom Actions Bar */}
             {scanResult && (
               <Box
                 sx={{
-                  p: 2.5,
+                  p: { xs: 1.5, sm: 2.5 },
+                  pb: { xs: 'calc(env(safe-area-inset-bottom, 0px) + 12px)', sm: 2.5 },
                   borderTop: (t) => `1px solid ${t.palette.divider}`,
                   bgcolor: 'background.neutral',
                 }}
               >
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <div>
-                    <Typography variant="subtitle2">
-                      {Object.keys(selectedItems).length} of {scanResult.matchedMedicines?.length || 0} items selected
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      Estimated Subtotal: <strong>{fCurrency(billEstimate)}</strong>
-                    </Typography>
-                  </div>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={{ xs: 1.5, sm: 2 }}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                  justifyContent="space-between"
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <div>
+                      <Typography variant="subtitle2" sx={{ fontSize: { xs: 13, sm: 14 } }}>
+                        {Object.keys(selectedItems).length} of {scanResult.matchedMedicines?.length || 0} items selected
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        Estimated Subtotal: <strong>{fCurrency(billEstimate)}</strong>
+                      </Typography>
+                    </div>
 
-                  <Stack direction="row" spacing={1.5}>
-                    <Button variant="outlined" color="inherit" onClick={handleReset}>
-                      Scan Another
-                    </Button>
+                    {isMobile && (
+                      <Button size="small" variant="text" color="inherit" onClick={handleReset}>
+                        Clear
+                      </Button>
+                    )}
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                    {!isMobile && (
+                      <Button variant="outlined" color="inherit" onClick={handleReset}>
+                        Scan Another
+                      </Button>
+                    )}
 
                     <Button
+                      fullWidth={isMobile}
                       variant="contained"
                       color="primary"
                       size="large"
                       startIcon={<Iconify icon="solar:cart-plus-bold" />}
                       disabled={Object.keys(selectedItems).length === 0}
                       onClick={handleApplyToBill}
+                      sx={{ py: { xs: 1.2, sm: 1 }, fontWeight: 700 }}
                     >
-                      Add Selected to Bill ({Object.keys(selectedItems).length})
+                      Add to Bill ({Object.keys(selectedItems).length})
                     </Button>
                   </Stack>
                 </Stack>
