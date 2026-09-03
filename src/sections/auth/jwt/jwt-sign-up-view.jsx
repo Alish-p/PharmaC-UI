@@ -86,12 +86,10 @@ export function JwtSignUpView() {
     } catch (error) {
       console.error(error);
       let message = 'An error occurred during registration';
-      if (error instanceof Error) {
-        message = error.message;
-      } else if (typeof error === 'string') {
+      if (typeof error === 'string') {
         message = error;
       } else if (error && typeof error === 'object' && 'message' in error) {
-        message = error.message;
+        ({ message } = error);
       }
       setErrorMsg(message);
     }
