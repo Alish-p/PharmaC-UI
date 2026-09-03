@@ -73,74 +73,94 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
     setImageFile(file);
     setImagePreview(previewUrl);
     setImageBase64(base64);
+    setIsScanning(true);
+    setScanProgressText('Scanning prescription with Gemini Vision OCR...');
     triggerScan(file, base64, false);
   };
 
   // Helper to optimize/compress large smartphone camera images before upload
   const compressImage = (file) =>
     new Promise((resolve) => {
-      // If image is already reasonably sized (< 1.5MB), use as-is
-      if (file.size <= 1.5 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = () => resolve({ file, base64: reader.result });
-        reader.onerror = () => resolve({ file, base64: null });
-        reader.readAsDataURL(file);
-        return;
-      }
+      // Safety timeout: if compression takes more than 2.5s on mobile, resolve with original file immediately
+      const timer = setTimeout(() => {
+        resolve({ file, base64: null });
+      }, 2500);
 
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        const maxDimension = 2048;
-        let { width, height } = img;
-
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
-          }
+      try {
+        if (!file || file.size <= 1.5 * 1024 * 1024) {
+          clearTimeout(timer);
+          const reader = new FileReader();
+          reader.onload = () => resolve({ file, base64: reader.result });
+          reader.onerror = () => resolve({ file, base64: null });
+          reader.readAsDataURL(file);
+          return;
         }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              const reader = new FileReader();
-              reader.onload = () => resolve({ file, base64: reader.result });
-              reader.readAsDataURL(file);
-              return;
+        img.onload = () => {
+          try {
+            URL.revokeObjectURL(objectUrl);
+            const maxDimension = 1536;
+            let { width, height } = img;
+
+            if (width > maxDimension || height > maxDimension) {
+              if (width > height) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              } else {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
+              }
             }
 
-            const compressedFile = new File([blob], `${file.name.replace(/\.[^/.]+$/, '')}.jpg`, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            const base64 = canvas.toDataURL('image/jpeg', 0.85);
-            resolve({ file: compressedFile, base64 });
-          },
-          'image/jpeg',
-          0.85
-        );
-      };
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              clearTimeout(timer);
+              resolve({ file, base64: null });
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
 
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        const reader = new FileReader();
-        reader.onload = () => resolve({ file, base64: reader.result });
-        reader.readAsDataURL(file);
-      };
+            canvas.toBlob(
+              (blob) => {
+                clearTimeout(timer);
+                if (!blob) {
+                  resolve({ file, base64: null });
+                  return;
+                }
 
-      img.src = objectUrl;
+                const compressedFile = new File([blob], `${file.name.replace(/\.[^/.]+$/, '')}.jpg`, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                const base64 = canvas.toDataURL('image/jpeg', 0.82);
+                resolve({ file: compressedFile, base64 });
+              },
+              'image/jpeg',
+              0.82
+            );
+          } catch (e) {
+            clearTimeout(timer);
+            resolve({ file, base64: null });
+          }
+        };
+
+        img.onerror = () => {
+          clearTimeout(timer);
+          URL.revokeObjectURL(objectUrl);
+          resolve({ file, base64: null });
+        };
+
+        img.src = objectUrl;
+      } catch (err) {
+        clearTimeout(timer);
+        resolve({ file, base64: null });
+      }
     });
 
   // Handle file drop/upload
@@ -155,13 +175,19 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
 
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
+    // Immediately set scanning state so mobile user gets instant visual feedback
+    setIsScanning(true);
+    setScanProgressText('Scanning prescription with Gemini Vision OCR...');
 
-    // Compress large smartphone camera photos in the background (100ms)
-    const { file: processedFile, base64 } = await compressImage(file);
-    setImageFile(processedFile);
-    if (base64) setImageBase64(base64);
-
-    triggerScan(processedFile, base64, false);
+    try {
+      const { file: processedFile, base64 } = await compressImage(file);
+      setImageFile(processedFile || file);
+      if (base64) setImageBase64(base64);
+      triggerScan(processedFile || file, base64, false);
+    } catch (err) {
+      console.error('Compression fallback:', err);
+      triggerScan(file, null, false);
+    }
   };
 
   // Trigger scanning API
@@ -484,14 +510,14 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                 isMobile && ((scanResult && mobileTab !== 'image') || (isScanning && !imagePreview))
                   ? 'none'
                   : 'flex',
-              height: { xs: 'auto', md: '100%' },
+              height: { xs: isMobile && isScanning ? '100%' : 'auto', md: '100%' },
               minHeight: 0,
               borderRight: (t) => ({ md: `1px solid ${t.palette.divider}` }),
               borderBottom: (t) => ({ xs: `1px solid ${t.palette.divider}`, md: 'none' }),
               flexDirection: 'column',
               bgcolor: 'background.neutral',
               overflowY: 'auto',
-              flex: isMobile && scanResult ? 1 : undefined,
+              flex: isMobile ? 1 : undefined,
               '&::-webkit-scrollbar': { width: 6 },
               '&::-webkit-scrollbar-thumb': {
                 backgroundColor: 'rgba(145, 158, 171, 0.35)',
@@ -580,6 +606,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                         color="primary"
                         startIcon={<Iconify icon="solar:camera-bold" />}
                         sx={{ py: 1 }}
+                        disabled={isScanning}
                       >
                         {isSmMobile ? 'Snap Photo' : 'Take Photo (Camera)'}
                         <input
@@ -598,6 +625,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                         color="inherit"
                         startIcon={<Iconify icon="solar:gallery-bold" />}
                         sx={{ py: 1 }}
+                        disabled={isScanning}
                       >
                         Choose File
                         <input
@@ -647,8 +675,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                     justifyContent: 'center',
                     bgcolor: 'grey.900',
                     position: 'relative',
-                    minHeight: { xs: 180, sm: 240 },
-                    maxHeight: isMobile && isScanning ? { xs: 220, sm: 280 } : undefined,
+                    minHeight: { xs: 260, sm: 320 },
                   }}
                 >
                   <img
@@ -660,8 +687,70 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                       objectFit: 'contain',
                       borderRadius: 6,
                       boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                      filter: isScanning ? 'brightness(0.55)' : 'none',
+                      transition: 'filter 0.3s ease',
                     }}
                   />
+
+                  {/* AI Scanning Feedback Overlay directly on the prescription image */}
+                  {isScanning && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'rgba(17, 24, 39, 0.65)',
+                        backdropFilter: 'blur(3px)',
+                        p: 3,
+                        zIndex: 5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Box sx={{ position: 'relative', mb: 2 }}>
+                        <CircularProgress size={isSmMobile ? 48 : 56} thickness={4} sx={{ color: 'primary.main' }} />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            bottom: 0,
+                            right: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Iconify
+                            icon="solar:magic-stick-3-bold"
+                            width={isSmMobile ? 22 : 26}
+                            sx={{ color: 'primary.main' }}
+                          />
+                        </Box>
+                      </Box>
+
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ color: 'common.white', fontWeight: 700, mb: 0.5, fontSize: { xs: 15, sm: 17 } }}
+                      >
+                        Analyzing Prescription with AI
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'grey.300',
+                          maxWidth: 320,
+                          fontSize: { xs: 12, sm: 13 },
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {scanProgressText || 'Deciphering doctor handwriting, brands & dosages...'}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             )}
@@ -672,12 +761,15 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
             xs={12}
             md={7}
             sx={{
-              display: isMobile && scanResult && mobileTab === 'image' ? 'none' : 'flex',
+              display:
+                isMobile && ((isScanning && imagePreview) || (scanResult && mobileTab === 'image'))
+                  ? 'none'
+                  : 'flex',
               height: { xs: 'auto', md: '100%' },
               minHeight: 0,
               flexDirection: 'column',
               bgcolor: 'background.paper',
-              overflow: 'hidden',
+              overflowY: 'auto',
               flex: 1,
             }}
           >
@@ -686,16 +778,17 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
               <Box
                 sx={{
                   flex: 1,
+                  minHeight: { xs: 320, md: '100%' },
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  p: { xs: 2.5, sm: 3.5, md: 4 },
+                  p: { xs: 3, sm: 4 },
                   textAlign: 'center',
                 }}
               >
-                <Box sx={{ position: 'relative', mb: { xs: 1.5, sm: 2.5 } }}>
-                  <CircularProgress size={isMobile ? 48 : 60} thickness={4} />
+                <Box sx={{ position: 'relative', mb: 2 }}>
+                  <CircularProgress size={56} thickness={4} />
                   <Box
                     sx={{
                       position: 'absolute',
@@ -710,7 +803,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                   >
                     <Iconify
                       icon="solar:magic-stick-3-bold"
-                      width={isMobile ? 22 : 28}
+                      width={26}
                       sx={{ color: 'primary.main' }}
                     />
                   </Box>
@@ -719,7 +812,7 @@ export default function PrescriptionScannerDialog({ open, onClose, onApplyToBill
                 <Typography
                   variant="subtitle1"
                   sx={{
-                    fontSize: { xs: 15, sm: 17 },
+                    fontSize: { xs: 16, sm: 18 },
                     fontWeight: 700,
                     mb: 0.5,
                   }}
